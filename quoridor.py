@@ -130,9 +130,6 @@ class Quoridor:
     def __str__(self):
         return self.formater_entete() + "\n" + self.formater_damier()
 
-    # ============================================
-    # deplacer un joueur (soumission 2)
-    # ============================================
 
     def deplacer_un_joueur(self, nom_joueur, destination):
         joueur = None
@@ -162,10 +159,6 @@ class Quoridor:
             raise QuoridorError("move pas permis")
 
         joueur["position"] = [x, y]
-
-    # ============================================
-    # placer un mur (soumission 3)
-    # ============================================
 
     def placer_un_mur(self, nom_joueur, destination, orientation):
         # simple: trouver joueur
@@ -228,12 +221,56 @@ class Quoridor:
         # ok on enleve un mur au joueur
         joueur["murs"] -= 1
 
-    # =============================
-    # reste a completer dans autres soumissions
-    # =============================
-
     def appliquer_un_coup(self, nom_joueur, type_coup, position):
-        raise NotImplementedError
+        # simple: trouver joueur
+        joueur = None
+        for j in self.joueurs:
+            if j["nom"] == nom_joueur:
+                joueur = j
+                break
+
+        if joueur is None:
+            raise QuoridorError("joueur existe pas")
+
+        # partie deja fini ?
+        def partie_terminee(self):
+            # simple: joueur 1 gagne si y == 9
+            if self.joueurs[0]["position"][1] == 9:
+                return self.joueurs[0]["nom"]
+
+            # simple: joueur 2 gagne si y == 1
+            if self.joueurs[1]["position"][1] == 1:
+                return self.joueurs[1]["nom"]
+
+            # sinon pas fini
+            return False
+
+
+        # check type coup valide
+        if type_coup not in ["D", "H", "V"]:
+            raise QuoridorError("type coup invalide")
+
+        # si deplacement
+        if type_coup == "D":
+            self.deplacer_un_joueur(nom_joueur, position)
+
+        # si mur horizontal
+        elif type_coup == "H":
+            self.placer_un_mur(nom_joueur, position, "H")
+
+        # si mur vertical
+        elif type_coup == "V":
+            self.placer_un_mur(nom_joueur, position, "V")
+
+        # incrementer tour si joueur 2 joue
+        # joueur 1 = self.joueurs[0]
+        # joueur 2 = self.joueurs[1]
+        if nom_joueur == self.joueurs[1]["nom"]:
+            self.tour += 1
+
+        # retourner ce que le prof veut
+        return (type_coup, position)
+
 
     def selectionner_un_coup(self, nom_joueur):
         raise NotImplementedError
