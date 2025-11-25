@@ -130,6 +130,10 @@ class Quoridor:
     def __str__(self):
         return self.formater_entete() + "\n" + self.formater_damier()
 
+    # ============================================
+    # deplacer un joueur (soumission 2)
+    # ============================================
+
     def deplacer_un_joueur(self, nom_joueur, destination):
         joueur = None
         for j in self.joueurs:
@@ -159,10 +163,74 @@ class Quoridor:
 
         joueur["position"] = [x, y]
 
-    # reste non implemente pour maintenant
+    # ============================================
+    # placer un mur (soumission 3)
+    # ============================================
 
     def placer_un_mur(self, nom_joueur, destination, orientation):
-        raise NotImplementedError
+        # simple: trouver joueur
+        joueur = None
+        for j in self.joueurs:
+            if j["nom"] == nom_joueur:
+                joueur = j
+                break
+
+        if joueur is None:
+            raise QuoridorError("joueur existe pas")
+
+        # plus de murs?
+        if joueur["murs"] <= 0:
+            raise QuoridorError("plus de murs")
+
+        x, y = destination
+
+        # pos valide
+        if not (1 <= x <= 8 and 1 <= y <= 8):
+            raise QuoridorError("pos mur invalide")
+
+        # placement
+        if orientation == "H":
+            # deja un mur?
+            if [x, y] in self.murs["horizontaux"]:
+                raise QuoridorError("mur existe deja")
+            # poser
+            self.murs["horizontaux"].append([x, y])
+
+        elif orientation == "V":
+            if [x, y] in self.murs["verticaux"]:
+                raise QuoridorError("mur existe deja")
+            self.murs["verticaux"].append([x, y])
+
+        else:
+            raise QuoridorError("orientation invalide")
+
+        # verifier que le mur n enferme pas un joueur
+        g = construire_graphe(
+            [p["position"] for p in self.joueurs],
+            self.murs["horizontaux"],
+            self.murs["verticaux"],
+        )
+
+        # check paths
+        for idx, j in enumerate(self.joueurs):
+            start = tuple(j["position"])
+            goal = "B1" if idx == 0 else "B2"
+
+            import networkx as nx
+            if not nx.has_path(g, start, goal):
+                # rollback mur
+                if orientation == "H":
+                    self.murs["horizontaux"].remove([x, y])
+                else:
+                    self.murs["verticaux"].remove([x, y])
+                raise QuoridorError("mur enferme joueur")
+
+        # ok on enleve un mur au joueur
+        joueur["murs"] -= 1
+
+    # =============================
+    # reste a completer dans autres soumissions
+    # =============================
 
     def appliquer_un_coup(self, nom_joueur, type_coup, position):
         raise NotImplementedError
