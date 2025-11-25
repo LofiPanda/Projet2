@@ -3,9 +3,9 @@ import copy
 
 from quoridor_error import QuoridorError
 from graphe import construire_graphe
+import networkx as nx
 
 
-# fonctions phase 1 pour compatibilite
 
 def formater_entete(joueurs):
     lignes = ["Legende:"]
@@ -88,10 +88,6 @@ def interpreter_ligne_de_commande():
     return args
 
 
-# ================================
-# classe Quoridor (phase 2)
-# ================================
-
 class Quoridor:
     def __init__(self, joueurs=None, murs=None, tour=0):
         if isinstance(joueurs, dict):
@@ -130,7 +126,6 @@ class Quoridor:
     def __str__(self):
         return self.formater_entete() + "\n" + self.formater_damier()
 
-
     def deplacer_un_joueur(self, nom_joueur, destination):
         joueur = None
         for j in self.joueurs:
@@ -161,7 +156,6 @@ class Quoridor:
         joueur["position"] = [x, y]
 
     def placer_un_mur(self, nom_joueur, destination, orientation):
-        # simple: trouver joueur
         joueur = None
         for j in self.joueurs:
             if j["nom"] == nom_joueur:
@@ -171,58 +165,46 @@ class Quoridor:
         if joueur is None:
             raise QuoridorError("joueur existe pas")
 
-        # plus de murs?
         if joueur["murs"] <= 0:
             raise QuoridorError("plus de murs")
 
         x, y = destination
-
-        # pos valide
         if not (1 <= x <= 8 and 1 <= y <= 8):
             raise QuoridorError("pos mur invalide")
 
-        # placement
         if orientation == "H":
-            # deja un mur?
             if [x, y] in self.murs["horizontaux"]:
                 raise QuoridorError("mur existe deja")
-            # poser
             self.murs["horizontaux"].append([x, y])
 
         elif orientation == "V":
             if [x, y] in self.murs["verticaux"]:
                 raise QuoridorError("mur existe deja")
             self.murs["verticaux"].append([x, y])
-
         else:
             raise QuoridorError("orientation invalide")
 
-        # verifier que le mur n enferme pas un joueur
         g = construire_graphe(
             [p["position"] for p in self.joueurs],
             self.murs["horizontaux"],
-            self.murs["verticaux"],
+            self.murs["verticaux"]
         )
 
-        # check paths
         for idx, j in enumerate(self.joueurs):
             start = tuple(j["position"])
             goal = "B1" if idx == 0 else "B2"
 
-            import networkx as nx
             if not nx.has_path(g, start, goal):
-                # rollback mur
                 if orientation == "H":
                     self.murs["horizontaux"].remove([x, y])
                 else:
                     self.murs["verticaux"].remove([x, y])
                 raise QuoridorError("mur enferme joueur")
 
-        # ok on enleve un mur au joueur
         joueur["murs"] -= 1
 
+
     def appliquer_un_coup(self, nom_joueur, type_coup, position):
-        # simple: trouver joueur
         joueur = None
         for j in self.joueurs:
             if j["nom"] == nom_joueur:
@@ -232,66 +214,84 @@ class Quoridor:
         if joueur is None:
             raise QuoridorError("joueur existe pas")
 
-        # partie deja fini ?
-        def partie_terminee(self):
-            # simple: joueur 1 gagne si y == 9
-            if self.joueurs[0]["position"][1] == 9:
-                return self.joueurs[0]["nom"]
+        if self.partie_terminee():
+            raise QuoridorError("partie fini")
 
-            # simple: joueur 2 gagne si y == 1
-            if self.joueurs[1]["position"][1] == 1:
-                return self.joueurs[1]["nom"]
-
-            # sinon pas fini
-            return False
-
-
-        # check type coup valide
         if type_coup not in ["D", "H", "V"]:
             raise QuoridorError("type coup invalide")
 
-        # si deplacement
         if type_coup == "D":
             self.deplacer_un_joueur(nom_joueur, position)
 
-        # si mur horizontal
         elif type_coup == "H":
             self.placer_un_mur(nom_joueur, position, "H")
 
-        # si mur vertical
         elif type_coup == "V":
             self.placer_un_mur(nom_joueur, position, "V")
 
-        # incrementer tour si joueur 2 joue
-        # joueur 1 = self.joueurs[0]
-        # joueur 2 = self.joueurs[1]
         if nom_joueur == self.joueurs[1]["nom"]:
             self.tour += 1
 
-        # retourner ce que le prof veut
         return (type_coup, position)
 
-
     def selectionner_un_coup(self, nom_joueur):
-        raise NotImplementedError
+        while True:
+            coup = input("type coup (D, H, V): ").strip().upper()
+            pos = input("pos x y: ").split()
+
+            try:
+                position = [int(pos[0]), int(pos[1])]
+            except:
+                print("pos pas bonne")
+                continue
+
+            copie = Quoridor(joueurs=self.etat_partie())
+            try:
+                copie.appliquer_un_coup(nom_joueur, coup, position)
+                return coup, position
+            except QuoridorError as e:
+                print("erreur:", e)
+                continue
+
 
     def partie_terminee(self):
-        raise NotImplementedError
+        if self.joueurs[0]["position"][1] == 9:
+            return self.joueurs[0]["nom"]
+
+        if self.joueurs[1]["position"][1] == 1:
+            return self.joueurs[1]["nom"]
+
+        return False
+
+    # ========================
+    # jouer un coup auto
+    # ========================
 
     def jouer_un_coup(self, nom_joueur):
-        raise NotImplementedError
+        joueur = None
+        idx = None
+        for i, j in enumerate(self.joueurs):
+            if j["nom"] == nom_joueur:
+                joueur = j
+                idx = i
+                break
 
+        if joueur is None:
+            raise QuoridorError("joueur existe pas")
 
-if __name__ == "__main__":
-    etat = {
-        "joueurs": [
-            {"nom": "IDUL", "murs": 7, "position": [5, 5]},
-            {"nom": "robot", "murs": 3, "position": [8, 6]},
-        ],
-        "murs": {
-            "horizontaux": [[4, 4], [2, 6], [3, 8], [5, 8], [7, 8]],
-            "verticaux": [[6, 2], [4, 4], [2, 6], [7, 5], [7, 7]],
-        },
-    }
-    p = Quoridor(joueurs=etat)
-    print(p)
+        if self.partie_terminee():
+            raise QuoridorError("partie fini")
+
+        g = construirre_graphe = construire_graphe(
+            [p["position"] for p in self.joueurs],
+            self.murs["horizontaux"],
+            self.murs["verticaux"]
+        )
+
+        pos = tuple(joueur["position"])
+        but = "B1" if idx == 0 else "B2"
+
+        chemin = nx.shortest_path(g, pos, but)
+        prochain = list(chemin[1])
+
+        return self.appliquer_un_coup(nom_joueur, "D", prochain)
