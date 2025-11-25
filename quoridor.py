@@ -8,7 +8,7 @@ from graphe import construire_graphe
 # fonctions phase 1 pour compatibilite
 
 def formater_entete(joueurs):
-    lignes = ["Légende:"]
+    lignes = ["Legende:"]
     max_len = max(len(j["nom"]) for j in joueurs)
 
     for i, joueur in enumerate(joueurs, start=1):
@@ -68,7 +68,7 @@ def formater_le_damier(joueurs, murs):
 def formater_le_jeu(etat):
     joueurs = etat["joueurs"]
     murs = etat["murs"]
-    lignes = ["Légende:"]
+    lignes = ["Legende:"]
     for i, joueur in enumerate(joueurs, start=1):
         lignes.append(f"   {i}={joueur['nom']}, murs={'|' * joueur['murs']}")
     damier = formater_le_damier(joueurs, murs)
@@ -81,7 +81,7 @@ def selectionner_un_coup():
     return coup, [int(pos[0]), int(pos[1])]
 
 
-def interpréter_la_ligne_de_commande():
+def interpreter_ligne_de_commande():
     parser = argparse.ArgumentParser(prog="main.py", description="Quoridor")
     parser.add_argument("idul", help="IDUL du joueur")
     args = parser.parse_args(args=["ceche25"])
@@ -114,28 +114,52 @@ class Quoridor:
 
             self.tour = tour
 
-    def état_partie(self):
+    def etat_partie(self):
         return {
             "joueurs": copy.deepcopy(self.joueurs),
             "murs": copy.deepcopy(self.murs),
             "tour": self.tour,
         }
 
-    def formater_entête(self):
+    def formater_entete(self):
         return formater_entete(self.joueurs)
 
-    def formater_le_damier(self):
+    def formater_damier(self):
         return formater_le_damier(self.joueurs, self.murs)
 
     def __str__(self):
-        return self.formater_entête() + "\n" + self.formater_le_damier()
+        return self.formater_entete() + "\n" + self.formater_damier()
 
-    # =======================
-    # methodes a completer
-    # =======================
+    def deplacer_un_joueur(self, nom_joueur, destination):
+        joueur = None
+        for j in self.joueurs:
+            if j["nom"] == nom_joueur:
+                joueur = j
+                break
 
-    def déplacer_un_joueur(self, nom_joueur, destination):
-        raise NotImplementedError
+        if joueur is None:
+            raise QuoridorError("joueur existe pas")
+
+        x, y = destination
+        if not (1 <= x <= 9 and 1 <= y <= 9):
+            raise QuoridorError("pos invalide")
+
+        g = construire_graphe(
+            [p["position"] for p in self.joueurs],
+            self.murs["horizontaux"],
+            self.murs["verticaux"]
+        )
+
+        pos_actuelle = tuple(joueur["position"])
+        dest = tuple(destination)
+        moves = list(g.successors(pos_actuelle))
+
+        if dest not in moves:
+            raise QuoridorError("move pas permis")
+
+        joueur["position"] = [x, y]
+
+    # reste non implemente pour maintenant
 
     def placer_un_mur(self, nom_joueur, destination, orientation):
         raise NotImplementedError
@@ -143,10 +167,10 @@ class Quoridor:
     def appliquer_un_coup(self, nom_joueur, type_coup, position):
         raise NotImplementedError
 
-    def sélectionner_un_coup(self, nom_joueur):
+    def selectionner_un_coup(self, nom_joueur):
         raise NotImplementedError
 
-    def partie_terminée(self):
+    def partie_terminee(self):
         raise NotImplementedError
 
     def jouer_un_coup(self, nom_joueur):
@@ -164,7 +188,5 @@ if __name__ == "__main__":
             "verticaux": [[6, 2], [4, 4], [2, 6], [7, 5], [7, 7]],
         },
     }
-    print(formater_le_jeu(etat))
-
-    partie = Quoridor(joueurs=etat)
-    print(partie)
+    p = Quoridor(joueurs=etat)
+    print(p)
